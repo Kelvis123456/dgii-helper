@@ -19,10 +19,14 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
         ? new MsSqlBuilder("mcr.microsoft.com/mssql/server:2022-latest").Build()
         : null;
 
+    public const string ApiKey = "clave-de-test";
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Testing");
         builder.UseSetting("ConnectionStrings:Default", LocalSql ?? _sql!.GetConnectionString());
+        builder.UseSetting("Auth:ApiKey", ApiKey);
+        builder.UseSetting("RateLimits:PerMinute", "100000");
     }
 
     public async Task InitializeAsync()
@@ -34,6 +38,13 @@ public class ApiFactory : WebApplicationFactory<Program>, IAsyncLifetime
     {
         await base.DisposeAsync();
         if (_sql is not null) await _sql.DisposeAsync();
+    }
+
+    public HttpClient AdminClient()
+    {
+        var http = CreateClient();
+        http.DefaultRequestHeaders.Add("X-Api-Key", ApiKey);
+        return http;
     }
 
     public AsyncServiceScope NewScope() => Services.CreateAsyncScope();
