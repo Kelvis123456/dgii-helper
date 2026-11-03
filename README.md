@@ -43,7 +43,7 @@ docker compose up -d sql
 dotnet run --project src/DgiiHelper.Api
 ```
 
-En desarrollo la clave es `dev-key` y la conexión está en `appsettings.Development.json`. Fuera de desarrollo la app no arranca si falta `Auth:ApiKey`.
+En desarrollo la clave es `dev-key` y la conexión está en `appsettings.Development.json`. Fuera de desarrollo la app no arranca si falta `Auth:ApiKey`. Si corre detrás de un proxy, pon `Proxy:Trusted=true` para que el límite por IP use la IP real del cliente; actívalo solo si el contenedor no se alcanza sin pasar por el proxy.
 
 ```bash
 dotnet test
