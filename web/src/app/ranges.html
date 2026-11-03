@@ -1,0 +1,153 @@
+<h1>Rangos de NCF</h1>
+<p class="lede">
+  Registra un rango autorizado por la DGII y entrega sus números uno a uno. La API garantiza que
+  ningún número se repite, aunque varias personas entreguen a la vez.
+</p>
+
+<section aria-labelledby="key-title">
+  <h2 id="key-title">Clave de API</h2>
+  <div class="field">
+    <label for="api-key"
+      >Se envía en el header <code>X-Api-Key</code>. Se guarda solo mientras la pestaña esté
+      abierta.</label
+    >
+    <input
+      id="api-key"
+      type="password"
+      autocomplete="off"
+      [ngModel]="apiKey.value()"
+      (ngModelChange)="apiKey.set($event)"
+      name="api-key"
+    />
+  </div>
+</section>
+
+<div aria-live="polite" class="messages">
+  @if (error(); as message) {
+    <p class="result error" role="alert">{{ message }}</p>
+  }
+</div>
+
+<section aria-labelledby="create-title">
+  <h2 id="create-title">Registrar un rango</h2>
+  <form (ngSubmit)="create()" class="grid">
+    <div class="field">
+      <label for="kind">Serie</label>
+      <select id="kind" name="kind" [ngModel]="kind()" (ngModelChange)="changeKind($event)">
+        <option value="traditional">Tradicional (B)</option>
+        <option value="electronic">Electrónica (E)</option>
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="type">Tipo de comprobante</label>
+      <select id="type" name="type" [ngModel]="type()" (ngModelChange)="type.set($event)">
+        @for (t of typeOptions(); track t.code) {
+          <option [value]="t.code">{{ t.code }}: {{ t.name }}</option>
+        }
+      </select>
+    </div>
+
+    <div class="field">
+      <label for="first">Primer número</label>
+      <input
+        id="first"
+        name="first"
+        type="number"
+        min="1"
+        [ngModel]="first()"
+        (ngModelChange)="first.set($event)"
+      />
+    </div>
+
+    <div class="field">
+      <label for="last">Último número</label>
+      <input
+        id="last"
+        name="last"
+        type="number"
+        min="1"
+        [ngModel]="last()"
+        (ngModelChange)="last.set($event)"
+      />
+    </div>
+
+    <div class="field">
+      <label for="expires">Vence el</label>
+      <input
+        id="expires"
+        name="expires"
+        type="date"
+        [ngModel]="expiresOn()"
+        (ngModelChange)="expiresOn.set($event)"
+      />
+    </div>
+
+    <div class="actions">
+      <button type="submit" [disabled]="busy() || !hasKey() || !expiresOn()">
+        Registrar rango
+      </button>
+    </div>
+  </form>
+  @if (!hasKey()) {
+    <p class="hint">Escribe la clave de API para registrar o entregar.</p>
+  }
+</section>
+
+<section aria-labelledby="lookup-title">
+  <h2 id="lookup-title">Consultar un rango</h2>
+  <form (ngSubmit)="lookup()" class="row">
+    <div class="field grow">
+      <label for="lookup">Número de rango</label>
+      <input
+        id="lookup"
+        name="lookup"
+        type="number"
+        min="1"
+        [ngModel]="lookupId()"
+        (ngModelChange)="lookupId.set($event)"
+      />
+    </div>
+    <button type="submit" class="secondary" [disabled]="busy() || !hasKey() || lookupId() === null">
+      Consultar
+    </button>
+  </form>
+</section>
+
+@if (range(); as r) {
+  <section aria-labelledby="range-title" class="panel">
+    <h2 id="range-title">Rango {{ r.id }}</h2>
+    <dl>
+      <dt>Serie y tipo</dt>
+      <dd>{{ r.kind === 'electronic' ? 'Electrónica' : 'Tradicional' }}, {{ r.type }}</dd>
+      <dt>Números</dt>
+      <dd>{{ r.first }} a {{ r.last }}</dd>
+      <dt>Vence el</dt>
+      <dd>{{ r.expiresOn }}</dd>
+      <dt>Quedan</dt>
+      <dd>{{ r.remaining }} de {{ total() }}</dd>
+    </dl>
+    <progress
+      [value]="used()"
+      [max]="total()"
+      [attr.aria-label]="'Números entregados de este rango'"
+    ></progress>
+
+    <button
+      type="button"
+      (click)="issueNext()"
+      [disabled]="busy() || !hasKey() || r.remaining === 0"
+    >
+      {{ r.remaining === 0 ? 'Rango agotado' : 'Entregar el siguiente número' }}
+    </button>
+
+    @if (issued().length) {
+      <h3>Entregados en esta sesión</h3>
+      <ol class="issued">
+        @for (ncf of issued(); track ncf) {
+          <li>{{ ncf }}</li>
+        }
+      </ol>
+    }
+  </section>
+}
