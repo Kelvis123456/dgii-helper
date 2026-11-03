@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/DgiiHelper.Api/DgiiHelper.Api.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/DgiiHelper.Tests/DgiiHelper.Tests.csproj" />
+  </Folder>
+</Solution>
