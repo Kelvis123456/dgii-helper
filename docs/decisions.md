@@ -36,6 +36,10 @@ El vencimiento de un rango se compara con la fecha de República Dominicana. Uso
 
 Es un servicio interno que otro sistema llama, así que una clave compartida en `X-Api-Key` alcanza, comparada en tiempo constante. En producción no arranca sin clave. Los validadores son públicos y no tocan la base, pero todo pasa por un límite de 120 peticiones por minuto por IP. Si algún día lo consumen varios clientes, habría que pasar a una clave por cliente.
 
+## 2026-11-02 · X-Forwarded-For solo con un interruptor
+
+Detrás de un proxy todas las peticiones traen la IP del proxy y el límite por IP sería uno solo para todos los clientes. `Proxy:Trusted=true` activa `UseForwardedHeaders`. Queda apagado por defecto: si el contenedor se pudiera alcanzar sin pasar por el proxy, cualquiera cambiaría `X-Forwarded-For` en cada petición y evadiría el límite. Hay un test para cada caso.
+
 ## 2026-11-02 · SQL Server real en los tests
 
 InMemory y SQLite no reproducen los bloqueos de fila ni el aislamiento serializable, que es justo lo que hay que probar. En CI y en local se levanta un contenedor con Testcontainers.

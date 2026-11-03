@@ -155,6 +155,44 @@ public class EndpointTests(ApiFactory api) : IAsyncLifetime
         Assert.Equal(2, codes.Count(c => c == HttpStatusCode.TooManyRequests));
     }
 
+    private static async Task<List<HttpStatusCode>> Hit(HttpClient http, string ip, int times)
+    {
+        var codes = new List<HttpStatusCode>();
+        for (var i = 0; i < times; i++)
+        {
+            var req = new HttpRequestMessage(HttpMethod.Get, "/api/rnc/101010101");
+            req.Headers.Add("X-Forwarded-For", ip);
+            codes.Add((await http.SendAsync(req)).StatusCode);
+        }
+        return codes;
+    }
+
+    [Fact]
+    public async Task Detras_de_un_proxy_de_confianza_cada_ip_real_tiene_su_propio_limite()
+    {
+        using var proxied = api.WithWebHostBuilder(b =>
+        {
+            b.UseSetting("RateLimits:PerMinute", "3");
+            b.UseSetting("Proxy:Trusted", "true");
+        });
+        var http = proxied.CreateClient();
+
+        Assert.All(await Hit(http, "203.0.113.10", 3), c => Assert.Equal(HttpStatusCode.OK, c));
+        Assert.Equal(HttpStatusCode.TooManyRequests, (await Hit(http, "203.0.113.10", 1))[0]);
+        Assert.All(await Hit(http, "203.0.113.11", 3), c => Assert.Equal(HttpStatusCode.OK, c)); // otra IP, otra cuenta
+    }
+
+    [Fact]
+    public async Task Sin_proxy_de_confianza_X_Forwarded_For_se_ignora_y_no_sirve_para_evadir_el_limite()
+    {
+        using var direct = api.WithWebHostBuilder(b => b.UseSetting("RateLimits:PerMinute", "3"));
+        var http = direct.CreateClient();
+
+        await Hit(http, "203.0.113.10", 3);
+        // Cambiar el header no da una cuenta nueva: el límite sigue contando la IP de la conexión.
+        Assert.Equal(HttpStatusCode.TooManyRequests, (await Hit(http, "203.0.113.99", 1))[0]);
+    }
+
     [Fact]
     public void En_produccion_no_arranca_sin_clave()
     {

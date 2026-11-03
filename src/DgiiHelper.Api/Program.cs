@@ -2,6 +2,7 @@ using System.Threading.RateLimiting;
 using DgiiHelper.Api;
 using DgiiHelper.Api.Data;
 using DgiiHelper.Api.Issuing;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -28,7 +29,22 @@ builder.Services.AddRateLimiter(o =>
         _ => new FixedWindowRateLimiterOptions { PermitLimit = perMinute, Window = TimeSpan.FromMinutes(1) }));
 });
 
+// Detrás de un proxy (Caddy, nginx, el balanceador de la nube) todas las peticiones llegan con la IP
+// del proxy y el límite por IP sería uno solo para todos. Solo se activa a propósito: si el contenedor
+// fuera alcanzable sin pasar por el proxy, cualquiera podría falsear X-Forwarded-For y evadir el límite.
+var behindProxy = builder.Configuration.GetValue("Proxy:Trusted", false);
+if (behindProxy)
+{
+    builder.Services.Configure<ForwardedHeadersOptions>(o =>
+    {
+        o.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+        o.KnownIPNetworks.Clear();
+        o.KnownProxies.Clear();
+    });
+}
+
 var app = builder.Build();
+if (behindProxy) app.UseForwardedHeaders();
 
 // Un servicio de una sola instancia: migrar al arrancar es lo más simple. Con varias réplicas
 // habría que sacarlo a un paso del despliegue.
