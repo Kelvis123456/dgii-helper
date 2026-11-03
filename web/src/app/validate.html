@@ -1,0 +1,65 @@
+<h1>Validar un identificador</h1>
+<p class="lede">
+  Comprueba que un RNC, una cédula o un NCF tienen forma válida. No consulta a la DGII: no dice si
+  la empresa o el comprobante existen, solo si el número es coherente.
+</p>
+
+<form (ngSubmit)="submit()" class="row">
+  <div class="field">
+    <label for="kind">Tipo</label>
+    <select id="kind" name="kind" [ngModel]="kind()" (ngModelChange)="kind.set($event)">
+      @for (k of kinds; track k.value) {
+        <option [value]="k.value">{{ k.label }}</option>
+      }
+    </select>
+  </div>
+
+  <div class="field grow">
+    <label for="value">Número</label>
+    <input
+      id="value"
+      name="value"
+      type="text"
+      autocomplete="off"
+      spellcheck="false"
+      [placeholder]="placeholder()"
+      [ngModel]="value()"
+      (ngModelChange)="value.set($event)"
+    />
+  </div>
+
+  <button type="submit" [disabled]="busy() || !value().trim()">
+    {{ busy() ? 'Comprobando…' : 'Validar' }}
+  </button>
+</form>
+
+<div aria-live="polite" class="result-region">
+  @if (error(); as message) {
+    <p class="result error" role="alert">{{ message }}</p>
+  }
+
+  @if (checked(); as c) {
+    @if (c.result.valid) {
+      <div class="result ok">
+        <p class="verdict">Válido</p>
+        @if (c.kind === 'ncf') {
+          <dl>
+            <dt>Serie</dt>
+            <dd>{{ c.result.kind === 'electronic' ? 'Electrónica (e-CF)' : 'Tradicional' }}</dd>
+            <dt>Tipo</dt>
+            <dd>{{ c.result.type }}, {{ c.result.typeName }}</dd>
+            <dt>Secuencia</dt>
+            <dd>{{ c.result.sequence }}</dd>
+          </dl>
+        } @else {
+          <p class="formatted">{{ c.result.formatted }}</p>
+        }
+      </div>
+    } @else {
+      <div class="result bad">
+        <p class="verdict">No es válido</p>
+        <p>{{ problem() }}</p>
+      </div>
+    }
+  }
+</div>

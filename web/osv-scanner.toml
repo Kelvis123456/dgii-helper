@@ -1,0 +1,12 @@
+# glob y minimatch llegan por @angular/cli (pacote), una herramienta de desarrollo del front.
+# No entran en el bundle que se sirve. El arreglo pide un salto mayor dentro de pacote, así que
+# se revisa cuando lo suba el CLI de Angular.
+[[IgnoredVulns]]
+id = "GHSA-3g3m-2fjr-6pw4"
+ignoreUntil = 2026-12-15
+reason = "glob 13 solo dentro del CLI de Angular, no está en el bundle"
+
+[[IgnoredVulns]]
+id = "GHSA-g3hv-75wg-m249"
+ignoreUntil = 2026-12-15
+reason = "minimatch 10 solo dentro del CLI de Angular, no está en el bundle"
