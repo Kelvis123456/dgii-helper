@@ -51,3 +51,14 @@ Es una sola instancia, así que `Database.Migrate()` al iniciar es lo más simpl
 ## 2026-11-02 · System.Security.Cryptography.Pkcs fijado en 10.0.13
 
 Llega como dependencia transitiva de `Microsoft.Data.SqlClient`. La 9.0.11 y la 10.0.12 tienen avisos de seguridad de NuGet (NU1902 y NU1903), y el build usa `-warnaserror`. La 10.0.13 ya no los tiene. Cuando SqlClient traiga una versión limpia, se puede quitar la referencia explícita.
+
+## 2026-11-03 · Lo que dejó una revisión adversarial y lo que no arreglé
+
+Una revisión de solo lectura no encontró nada grave. Arreglé lo que se demostraba con el código: `kind` aceptaba `"1"` y `"0"` porque `Enum.TryParse` entiende números, una clave de solo espacios pasaba el chequeo de arranque, el límite por IP en IPv6 daba un cupo nuevo por cada dirección dentro de un /64 (ahora se cuenta por el prefijo de 64 bits), y el front mostraba "Ese rango no existe" al validar `..` porque el navegador normaliza esa ruta.
+
+**No lo arreglé, y lo dejé escrito:**
+- Un número entregado se pierde si el cliente corta justo después de que SQL Server ejecuta el UPDATE. Cerrarlo pide una tabla de emisiones con clave de idempotencia, que es otro diseño y no lo necesito para lo que quiero demostrar. Está en el README como límite.
+- Las altas de rango serializables recorren toda la tabla porque no hay índice por `(Kind, TypeCode, First, Last)`. Con 20 altas paralelas pasa; no lo medí más allá.
+- `/health` consulta la base sin límite ni clave.
+- Los binarios de gitleaks y osv-scanner se bajan en CI sin verificar checksum, y las dependencias de NuGet no pasan por OSV (no hay lockfile). Las cubre Dependabot.
+- La revisión la hizo un modelo de la misma familia que escribió el código, no una revisión independiente. Sigue pendiente la de Codex.

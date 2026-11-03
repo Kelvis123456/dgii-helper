@@ -83,6 +83,13 @@ describe('Validate', () => {
       .flush({ valid: true, formatted: '001-1234567-3', problem: null });
   });
 
+  it.each(['..', '.', '12/34', '101?010', '<b>x</b>'])('no manda a la API un valor con caracteres raros: %s', async (raw) => {
+    await type(raw);
+    await submit();
+    http.expectNone(() => true);
+    expect(q<HTMLElement>('[role="alert"]').textContent).toContain('solo letras, números y guiones');
+  });
+
   it('para un NCF muestra la serie, el tipo y la secuencia', async () => {
     await choose('ncf');
     await type('E310000000150');

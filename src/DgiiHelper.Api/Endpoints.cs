@@ -90,9 +90,9 @@ public static class Endpoints
     private static bool TryParseKind(string? text, out NcfKind kind)
     {
         kind = default;
-        return text is not null
-            && Enum.TryParse(text, ignoreCase: true, out kind)
-            && Enum.IsDefined(kind);
+        // Enum.TryParse también acepta "1" o "0" como números; aquí solo valen los nombres.
+        var name = Enum.GetNames<NcfKind>().FirstOrDefault(n => string.Equals(n, text, StringComparison.OrdinalIgnoreCase));
+        return name is not null && Enum.TryParse(name, out kind);
     }
 
     private static async ValueTask<object?> RequireApiKey(EndpointFilterInvocationContext ctx, EndpointFilterDelegate next)

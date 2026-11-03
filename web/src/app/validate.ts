@@ -43,6 +43,13 @@ export class Validate {
     if (!value || this.busy()) return;
     const kind = this.kind();
 
+    // Un valor como ".." no se codifica en la URL y el navegador lo normaliza a /api/, que da un 404 engañoso.
+    if (!/^[0-9A-Za-z\- ]+$/.test(value)) {
+      this.checked.set(null);
+      this.error.set('Usa solo letras, números y guiones.');
+      return;
+    }
+
     this.busy.set(true);
     this.error.set(null);
     this.api.validate(kind, value).subscribe({
