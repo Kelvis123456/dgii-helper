@@ -32,6 +32,7 @@ POST /api/ncf/ranges/1/issue
 - No consulta el padrón de la DGII. Validar un RNC es comprobar el dígito verificador, no saber si la empresa existe.
 - No valida el XML de un e-CF contra los esquemas de la DGII ni lo firma ni lo envía.
 - No sabe si un NCF fue realmente autorizado, solo si tiene forma de NCF.
+- No guarda un registro de los números entregados ni acepta una clave de idempotencia. Si el cliente corta la conexión justo después de que SQL Server ejecutó la entrega, el número se consume y nadie lo ve: el hueco no se puede conciliar desde esta API. Un sistema de facturación real tendría que registrar cada emisión y reintentar con la misma clave.
 - Los tipos de comprobante salen de la documentación pública de la DGII tal como la leí. Antes de usarlo en serio hay que contrastarlos con la norma vigente.
 
 ## Cómo correrlo

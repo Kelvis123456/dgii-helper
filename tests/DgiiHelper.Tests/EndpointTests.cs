@@ -123,6 +123,9 @@ public class EndpointTests(ApiFactory api) : IAsyncLifetime
     [Theory]
     [InlineData("papel", "01", 1, 5, "kind")]
     [InlineData(null, "01", 1, 5, "kind")]
+    [InlineData("1", "31", 1, 5, "kind")] // Enum.TryParse aceptaría el número
+    [InlineData("0", "01", 1, 5, "kind")]
+    [InlineData(" traditional ", "01", 1, 5, "kind")]
     [InlineData("traditional", "99", 1, 5, "type")]
     [InlineData("traditional", "01", 9, 5, "bounds")]
     [InlineData("electronic", "01", 1, 5, "type")] // 01 es de la serie B

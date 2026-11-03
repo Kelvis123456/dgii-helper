@@ -16,7 +16,7 @@ builder.Services.AddHealthChecks().AddDbContextCheck<AppDbContext>();
 
 // Sin clave los endpoints que entregan números quedarían cerrados para todos, y eso en producción
 // casi seguro es un olvido: mejor no arrancar.
-if (string.IsNullOrEmpty(builder.Configuration["Auth:ApiKey"]) && !builder.Environment.IsDevelopment() && !builder.Environment.IsEnvironment("Testing"))
+if (string.IsNullOrWhiteSpace(builder.Configuration["Auth:ApiKey"]) && !builder.Environment.IsDevelopment() && !builder.Environment.IsEnvironment("Testing"))
     throw new InvalidOperationException("Falta Auth:ApiKey.");
 
 // Por IP. Los validadores no cuestan nada, pero la API es pública y los de emisión tocan la base.
@@ -25,7 +25,7 @@ builder.Services.AddRateLimiter(o =>
 {
     o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
     o.AddPolicy("api", http => RateLimitPartition.GetFixedWindowLimiter(
-        http.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+        RateLimitKey.For(http.Connection.RemoteIpAddress),
         _ => new FixedWindowRateLimiterOptions { PermitLimit = perMinute, Window = TimeSpan.FromMinutes(1) }));
 });
 
