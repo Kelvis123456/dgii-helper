@@ -4,7 +4,7 @@ API en ASP.NET Core para dos cosas que cualquier sistema de facturación dominic
 
 Lo segundo es la parte que me interesaba. Un NCF repetido no es solo un bug de la app, es un problema con la DGII, así que quise ver cómo se garantiza de verdad con SQL Server y no solo con "casi nunca pasa".
 
-**Stack:** .NET 10 · ASP.NET Core minimal APIs · EF Core 10 · SQL Server · xUnit + Testcontainers · GitHub Actions · Docker
+**Stack:** .NET 10 · ASP.NET Core minimal APIs · EF Core 10 · SQL Server · xUnit + Testcontainers · Angular 21 · GitHub Actions · Docker
 
 ## Qué hace
 
@@ -48,6 +48,8 @@ En desarrollo la clave es `dev-key` y la conexión está en `appsettings.Develop
 ```bash
 dotnet test
 ```
+
+La interfaz en Angular vive en `web/`; cómo correrla está en [web/README.md](web/README.md).
 
 Los tests levantan un SQL Server real con Testcontainers. Si ya tienes uno instalado, apunta `DGII_TEST_SQL` a su cadena de conexión.
 
