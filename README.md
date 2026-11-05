@@ -1,23 +1,27 @@
+Español: [README.es.md](README.es.md)
+
 # dgii-helper
 
-API en ASP.NET Core para dos cosas que cualquier sistema de facturación dominicano termina necesitando: comprobar que un RNC, una cédula, un NCF o un e-CF tienen forma válida, y entregar números de NCF sin repetir ninguno aunque lleguen muchas facturas a la vez.
+An ASP.NET Core API for two things any Dominican invoicing system ends up needing: checking that an RNC, a cédula, an NCF or an e-CF has a valid shape, and handing out NCF numbers without ever repeating one, even when many invoices arrive at once.
 
-Lo segundo es la parte que me interesaba. Un NCF repetido no es solo un bug de la app, es un problema con la DGII, así que quise ver cómo se garantiza de verdad con SQL Server y no solo con "casi nunca pasa".
+For readers outside the Dominican Republic: the DGII is the country's tax authority, an RNC is a business tax ID, a cédula is the national ID number, and an NCF (or its electronic version, the e-CF) is the sequential number the DGII authorizes for each invoice.
+
+The second part is what interested me. A repeated NCF is not just an app bug, it is a problem with the DGII, so I wanted to see how to actually guarantee uniqueness with SQL Server and not just rely on "it almost never happens".
 
 **Stack:** .NET 10 · ASP.NET Core minimal APIs · EF Core 10 · SQL Server · xUnit + Testcontainers · Angular 21 · GitHub Actions · Docker
 
-## Qué hace
+## What it does
 
-| Endpoint | Para qué | Clave |
+| Endpoint | Purpose | Key |
 |---|---|---|
-| `GET /api/rnc/{valor}` | Valida un RNC de 9 dígitos y lo devuelve con guiones | no |
-| `GET /api/cedula/{valor}` | Valida una cédula de 11 dígitos | no |
-| `GET /api/ncf/{valor}` | Lee un NCF (serie B) o un e-CF (serie E): tipo y secuencia | no |
-| `POST /api/ncf/ranges` | Registra un rango autorizado por la DGII | sí |
-| `GET /api/ncf/ranges/{id}` | Cuántos números quedan en el rango | sí |
-| `POST /api/ncf/ranges/{id}/issue` | Entrega el siguiente número | sí |
+| `GET /api/rnc/{valor}` | Validates a 9-digit RNC and returns it with dashes | no |
+| `GET /api/cedula/{valor}` | Validates an 11-digit cédula | no |
+| `GET /api/ncf/{valor}` | Reads an NCF (series B) or an e-CF (series E): type and sequence | no |
+| `POST /api/ncf/ranges` | Registers a range authorized by the DGII | yes |
+| `GET /api/ncf/ranges/{id}` | How many numbers are left in the range | yes |
+| `POST /api/ncf/ranges/{id}/issue` | Hands out the next number | yes |
 
-La clave va en el header `X-Api-Key`. Emitir responde 201 con el NCF, 409 si el rango se agotó, 410 si venció y 404 si no existe.
+The key goes in the `X-Api-Key` header. Issuing returns 201 with the NCF, 409 if the range is exhausted, 410 if it has expired and 404 if it does not exist.
 
 ```
 POST /api/ncf/ranges
@@ -27,36 +31,36 @@ POST /api/ncf/ranges/1/issue
 201 { "ncf": "B0100000001", "sequence": 1 }
 ```
 
-## Lo que no hace
+## What it does not do
 
-- No consulta el padrón de la DGII. Validar un RNC es comprobar el dígito verificador, no saber si la empresa existe.
-- No valida el XML de un e-CF contra los esquemas de la DGII ni lo firma ni lo envía.
-- No sabe si un NCF fue realmente autorizado, solo si tiene forma de NCF.
-- No guarda un registro de los números entregados ni acepta una clave de idempotencia. Si el cliente corta la conexión justo después de que SQL Server ejecutó la entrega, el número se consume y nadie lo ve: el hueco no se puede conciliar desde esta API. Un sistema de facturación real tendría que registrar cada emisión y reintentar con la misma clave.
-- Los tipos de comprobante salen de la documentación pública de la DGII tal como la leí. Antes de usarlo en serio hay que contrastarlos con la norma vigente.
+- It does not query the DGII registry. Validating an RNC means checking the check digit, not knowing whether the company exists.
+- It does not validate an e-CF's XML against the DGII schemas, sign it or send it.
+- It does not know whether an NCF was actually authorized, only whether it looks like an NCF.
+- It does not keep a record of the numbers it issued and does not accept an idempotency key. If the client drops the connection right after SQL Server ran the issue, the number is consumed and nobody sees it: the gap cannot be reconciled from this API. A real invoicing system would have to record every issue and retry with the same key.
+- The voucher types come from the DGII's public documentation as I read it. Before using this seriously they need to be checked against the current regulation.
 
-## Cómo correrlo
+## How to run it
 
-Necesitas .NET 10 y Docker.
+You need .NET 10 and Docker.
 
 ```bash
 docker compose up -d sql
 dotnet run --project src/DgiiHelper.Api
 ```
 
-En desarrollo la clave es `dev-key` y la conexión está en `appsettings.Development.json`. Fuera de desarrollo la app no arranca si falta `Auth:ApiKey`. Si corre detrás de un proxy, pon `Proxy:Trusted=true` para que el límite por IP use la IP real del cliente; actívalo solo si el contenedor no se alcanza sin pasar por el proxy.
+In development the key is `dev-key` and the connection string is in `appsettings.Development.json`. Outside development the app does not start if `Auth:ApiKey` is missing. If it runs behind a proxy, set `Proxy:Trusted=true` so the per-IP limit uses the client's real IP; turn it on only if the container cannot be reached without going through the proxy.
 
 ```bash
 dotnet test
 ```
 
-La interfaz en Angular vive en `web/`; cómo correrla está en [web/README.md](web/README.md).
+The Angular UI lives in `web/`; how to run it is in [web/README.md](web/README.md).
 
-Los tests levantan un SQL Server real con Testcontainers. Si ya tienes uno instalado, apunta `DGII_TEST_SQL` a su cadena de conexión.
+The tests start a real SQL Server with Testcontainers. If you already have one installed, point `DGII_TEST_SQL` at its connection string.
 
-## Decisiones
+## Decisions
 
-Están en [docs/decisions.md](docs/decisions.md). Las dos que más me costaron:
+They are in [docs/decisions.md](docs/decisions.md). The two that cost me the most:
 
-- **Emitir con un solo `UPDATE ... OUTPUT`** en vez de una transacción serializable. Con 40 peticiones simultáneas salen 40 números distintos y seguidos.
-- **Serializable solo para registrar rangos**, donde sí hay que comprobar que no se solapen. Ahí encontré que mi reintento por deadlock nunca se activaba porque EF envuelve la excepción en dos capas.
+- **Issuing with a single `UPDATE ... OUTPUT`** instead of a serializable transaction. With 40 simultaneous requests you get 40 distinct, consecutive numbers.
+- **Serializable only for registering ranges**, where you do need to check that they do not overlap. That is where I found that my deadlock retry never fired, because EF wraps the exception in two layers.
