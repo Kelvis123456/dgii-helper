@@ -5,7 +5,7 @@ RUN dotnet restore src/DgiiHelper.Api/DgiiHelper.Api.csproj
 COPY src/ src/
 RUN dotnet publish src/DgiiHelper.Api -c Release -o /app --no-restore
 
-FROM mcr.microsoft.com/dotnet/aspnet:10.0
+FROM mcr.microsoft.com/dotnet/aspnet:11.0
 WORKDIR /app
 COPY --from=build /app .
 # La fecha de vencimiento se calcula con UTC-4 fijo, así que no hace falta tzdata.
